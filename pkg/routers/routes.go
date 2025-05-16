@@ -14,7 +14,8 @@ func Routes() *gin.Engine {
 	r.GET("/hello", controllers.Hello)
 	r.POST("/register", controllers.Register)
 	r.POST("/login", controllers.Login)
-
+	r.GET("/excel", controllers.GetDataFromExcel)
+	r.POST("/multiple", controllers.CreateMultipleBlog)
 	
 	authorized := r.Group("/")
 	authorized.Use(middleware.AuthMiddleware())

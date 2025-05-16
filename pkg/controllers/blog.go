@@ -4,6 +4,8 @@ import (
 	"BlogHub/pkg/dto"
 	"BlogHub/pkg/services"
 	"BlogHub/pkg/utils"
+	"encoding/json"
+	"io"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -102,5 +104,48 @@ func UpdateBlog(c *gin.Context) {
 	c.JSON(200, gin.H{
 		"message": "Blog Updated successfully",
 		"Blog":    &blog,
+	})
+}
+
+func CreateMultipleBlog(c *gin.Context) {
+	var reqBlogs []dto.CreateBlogReq
+	var respBlogs []dto.BlogResponse
+
+	resp, err := http.Get("http://localhost:8080/excel")
+
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{
+			"error":   "failed to call /excel",
+			"details": err.Error(),
+		})
+	}
+
+	defer resp.Body.Close()
+
+	body, _ := io.ReadAll(resp.Body)
+
+	var ExcelResp dto.ExcelResp
+
+	if err = json.Unmarshal(body, &ExcelResp); err != nil {
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "Failed to parse /excel response", "details": err.Error()})
+	}
+
+	reqBlogs = ExcelResp.Blogs
+
+	for i:=0; i< len(reqBlogs); i++{
+		respBlog, err := services.CreateBlogService(reqBlogs[i])
+		if err!=nil{
+			c.AbortWithStatusJSON(400, gin.H{
+			"db_error": "Failed to insert Blog",
+			"details":  err.Error(),
+		})
+		return
+		}
+		respBlogs = append(respBlogs, respBlog)
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message":        "/add executed and /excel was also called",
+		"blogs": respBlogs,
 	})
 }
